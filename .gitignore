@@ -2,3 +2,9 @@ source/
 test/
 test_out/
 trajectories/
+__pycache__/
+*.pyc
+timing/
+.vscode/
+
+*.tar.gz

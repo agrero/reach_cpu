@@ -119,10 +119,27 @@ class Reach:
             self,
             reach_path : str
         ) -> None:
-
+        """Python Wrapper for Running REACH
+        
+        Parameters
+        ----------
+        reach_path : 'str'
+            Filepath for the REACH binary.
+        """
         self.reach_path = reach_path
 
     def run(self, input_path:str, out_path:str, output_dir:str) -> None:
+        """Run the REACH program on a given set of inputs
+
+        Parameters
+        ----------
+        input_path : 'str'
+            Path to the .inp file created either through ReachConfig or manually.
+        out_path : 'str'
+            Path to write the .out file 
+        output_dir : 'str'
+            working directory to switch to in order for the 1ndist.dat files to save properly         
+        """
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -139,6 +156,39 @@ class Reach:
                     cwd = output_dir
                 )
 
+    def add_suffix_to_path(self, path:str, suffix:str="_ca") -> str:
+
+        basename = os.path.basename(path)
+        basename = basename.split(".")
+        basename = basename[0] + suffix + "." + basename[1]
+
+        root = "/".join(path.split("/")[:-1])
+
+        return root + "/" + basename
+
+    def process_xtc_to_input(
+        self, 
+        xtc_path:str, 
+        dcd_path:str, 
+        pdb_path:str
+    ) -> None:
+
+        # LOAD AND SELECT
+
+        traj = md.load(xtc_path, top=pdb_path) 
+        atom_indices = traj.topology.select("protein and name CA")
+
+        # CHANGE PATHS
+
+        new_dcd_path = self.add_suffix_to_path(dcd_path)
+        new_pdb_path = self.add_suffix_to_path(pdb_path)
+
+        # SLICE AND WRITE
+
+        traj_subset = traj.atom_slice(atom_indices)
+        traj_subset.save_dcd(new_dcd_path)
+        traj_subset[0].save_pdb(new_pdb_path)
+
     def convert_xtc_to_dcd(self, xtc_path:str, dcd_path:str, pdb_path:str) -> None:
         md.load(xtc_path, top=pdb_path).save_dcd(dcd_path)
 
@@ -149,13 +199,20 @@ if __name__ == "__main__":
     reach_exec_path = os.path.join("..", "source", "reach")
     
     output_dir = os.path.join("test_out")
+    os.makedirs(output_dir, exist_ok=True)
+
     reach_input_path = os.path.join(output_dir, "pyreach.inp")
     reach_out_path = os.path.join(output_dir, "pyreach.out")
 
+    struc_dir = os.path.join("..", "trajectories", "1a62_A")
+    CRDPATH = os.path.abspath(os.path.join(struc_dir, "1a62_A_ca.pdb"))
+    DSSPPATH = os.path.abspath(os.path.join(struc_dir, "1a62_A.dssp"))
+    DCDPATHS = os.path.abspath(os.path.join(struc_dir, "1a62_A_prod_R1_fit_ca.dcd"))
+
     config = ReachConfig(
-        CRDPATH=os.path.join(test_dir, "mb_ca.pdb"),
-        DSSPPATH=os.path.join(test_dir, "1a6g.dssp"),
-        DCDPATHS=[os.path.join(test_dir, "mb_ca.dcd")],
+        CRDPATH=CRDPATH,
+        DSSPPATH=DSSPPATH,
+        DCDPATHS=[DCDPATHS],
     )
     config.write(os.path.join(output_dir, "pyreach.inp"))
 

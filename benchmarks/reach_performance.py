@@ -1,4 +1,4 @@
-from ReachClasses import ReachConfig, Reach
+from ..ReachClasses import ReachConfig, Reach
 
 import timeit
 
